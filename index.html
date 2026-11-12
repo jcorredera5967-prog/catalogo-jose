@@ -102,7 +102,9 @@ fetch(URL_CSV)
     datos = filas.slice(1).filter(r => r.length >= 2).map(r => {
       let obj = {};
       cab.forEach((k, i) => obj[k] = (r[i] || "").trim());
-      if (obj.Enlace) obj.Enlace = obj.Enlace.replace(/https:\/\/t\.me(\d+)/, "https://t.me");
+      if (obj.Enlace) {
+  obj.Enlace = obj.Enlace.replace(/https?:\/\/t\.me\/?(?:c\/)?(\d+)/, "https://t.me");
+}
       return obj;
     }).reverse();
     cargarFiltros();
