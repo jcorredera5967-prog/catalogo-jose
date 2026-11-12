@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo de Jóse M.</title>
+  <script src="https://cloudflare.com"></script>
+  <style>
+    body { background: #0b0d12; color: #f3f4f6; padding: 24px 20px; }
+    header, .grid { max-width: 1440px; margin: 0 auto; }
+    .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+    h1 { font-size: 1.75rem; font-weight: 800; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+    .tab { background: #151922; border: 1px solid #262c3a; color: #9ca3af; padding: 9px 18px; border-radius: 22px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+    .tab:hover { color: #fff; border-color: #4b5563; }
+    .tab.active { background: #e50914; color: #fff; border-color: #e50914; }
+    .controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+    input, select { background: #151922; color: #fff; border: 1px solid #262c3a; padding: 11px 15px; border-radius: 9px; font-size: 14px; outline: none; }
+    input { flex: 1; min-width: 250px; }
+    input:focus, select:focus { border-color: #e50914; }
+    .stats { color: #9ca3af; font-size: 13px; margin-bottom: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(305px, 1fr)); gap: 22px; }
+    .card { background: #151922; border: 1px solid #262c3a; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s; }
+    .card:hover { transform: translateY(-4px); border-color: #3b4458; }
+    .poster { position: relative; aspect-ratio: 16 / 9; background: linear-gradient(135deg, #1a202c 0%, #0f131a 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .no-img-text { padding: 20px; text-align: center; font-weight: 700; color: #64748b; font-size: 14px; }
+    .b-left { position: absolute; top: 8px; left: 8px; background: rgba(11, 13, 18, 0.85); padding: 4px 9px; border-radius: 5px; font-size: 11px; font-weight: bold; z-index: 2; border: 1px solid rgba(255,255,255,0.1); }
+    .b-right { position: absolute; bottom: 8px; right: 8px; background: #e50914; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; z-index: 2; }
+    .body { padding: 15px; flex: 1; display: flex; flex-direction: column; }
+    .title { font-size: 17px; font-weight: 700; margin-bottom: 5px; color: #fff; }
+    .genre { font-size: 12px; color: #60a5fa; font-weight: 600; margin-bottom: 8px; }
+    .credits { font-size: 12px; color: #9ca3af; margin-bottom: 10px; line-height: 1.4; }
+    .credits b { color: #d1d5db; }
+    .sinopsis { font-size: 13px; color: #cbd5e1; line-height: 1.4; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .btn { margin-top: auto; text-align: center; background: #2481cc; color: #fff; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; transition: 0.2s; }
+    .btn:hover { background: #1b66a3; }
+    .load-more { display: block; margin: 30px auto; padding: 12px 28px; background: #151922; color: #fff; border: 1px solid #262c3a; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    .load-more:hover { border-color: #fff; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="top">
+    <h1>🎬 Catálogo de Jóse M.</h1>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-cat="Todos">Todos</button>
+    <button class="tab" data-cat="Películas">1. La Videoteca</button>
+    <button class="tab" data-cat="Series">2. La Serieteca</button>
+    <button class="tab" data-cat="Sagas">3. Sagas</button>
+    <button class="tab" data-cat="Series Clásicas">4. Series Clásicas TV</button>
+  </div>
+  <div class="controls">
+    <input type="text" id="search" placeholder="Buscar por título, actor, director o sinopsis...">
+    <select id="folder"><option value="">Todas las carpetas / temas</option></select>
+    <select id="genre"><option value="">Todos los géneros</option></select>
+  </div>
+  <div class="stats" id="stats">Cargando catálogo desde Google Sheets...</div>
+</header>
+
+<main class="grid" id="grid"></main>
+<button class="load-more" id="moreBtn" style="display:none;">Cargar más títulos</button>
+
+<script>
+const URL_CSV = "https://google.com";
+
+let datos = [];
+let filtrados = [];
+let catActual = "Todos";
+let limite = 60;
+
+const grid = document.getElementById("grid");
+const stats = document.getElementById("stats");
+const search = document.getElementById("search");
+const folder = document.getElementById("folder");
+const genre = document.getElementById("genre");
+const moreBtn = document.getElementById("moreBtn");
+
+Papa.parse(URL_CSV, {
+  download: true,
+  header: true,
+  skipEmptyLines: true,
+  complete: function(res) {
+    datos = res.data.map(d => {
+      if (d.Enlace) {
+        d.Enlace = d.Enlace.replace(/https:\/\/t\.me(\d+)/, "https://t.me");
+      }
+      return d;
+    }).reverse();
+    cargarFiltros();
+    aplicarFiltros();
+  },
+  error: function() {
+    stats.textContent = "Error al conectar con Google Sheets. Revisa tu conexión a internet.";
+  }
+});
+
+function cargarFiltros() {
+  [...new Set(datos.map(d => (d.Carpeta || "").trim()).filter(Boolean))].sort().forEach(c => {
+    folder.innerHTML += `<option value="${c}">${c}</option>`;
+  });
+  const genSet = new Set();
+  datos.forEach(d => {
+    if (d.Género) {
+      d.Género.split(/[|·#]/).map(g => g.replace(/_/g, " ").trim()).filter(g => g.length > 2).forEach(g => genSet.add(g));
+    }
+  });
+  [...genSet].sort().forEach(g => {
+    genre.innerHTML += `<option value="${g}">${g}</option>`;
+  });
+}
+
+function aplicarFiltros() {
+  const q = search.value.toLowerCase();
+  const f = folder.value;
+  const g = genre.value.toLowerCase();
+
+  filtrados = datos.filter(d => {
+    const okCat = catActual === "Todos" || (d.Categoría || "").trim() === catActual;
+    const okFol = !f || (d.Carpeta || "").trim() === f;
+    const genNorm = (d.Género || "").replace(/_/g, " ").toLowerCase();
+    const okGen = !g || genNorm.includes(g);
+    const texto = ((d.Título || "") + " " + (d.Director || "") + " " + (d.Reparto || "") + " " + (d.Sinopsis || "")).replace(/_/g, " ").toLowerCase();
+    return okCat && okFol && okGen && (!q || texto.includes(q));
+  });
+
+  limite = 60;
+  pintar();
+}
+
+function pintar() {
+  const trozo = filtrados.slice(0, limite);
+  stats.textContent = "Mostrando " + trozo.length + " de " + filtrados.length + " títulos";
+  grid.innerHTML = trozo.map(d => {
+    const dir = (d.Director || "").replace(/#/g, "").replace(/_/g, " ");
+    const rep = (d.Reparto || "").replace(/#/g, "").replace(/_/g, " ");
+    const gen = (d.Género || "").replace(/#/g, "").replace(/_/g, " ");
+    const imgHtml = d.Imagen 
+      ? `<img src="${d.Imagen}" loading="lazy" alt="${d.Título || ''}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><span class="no-img-text" style="display:none;">🎬 ${d.Título || ''}</span>`
+      : `<span class="no-img-text">🎬 ${d.Título || ''}</span>`;
+
+    return `
+      <article class="card">
+        <div class="poster">
+          <span class="b-left">📁 ${d.Carpeta || ""}</span>
+          <span class="b-right">${d.Categoría || ""}</span>
+          ${imgHtml}
+        </div>
+        <div class="body">
+          <div class="title">${d.Título || ""}</div>
+          ${gen ? `<div class="genre">${gen}</div>` : ""}
+          <div class="credits">
+            ${dir ? `<b>Dirección:</b> ${dir}<br>` : ""}
+            ${rep ? `<b>Reparto:</b> ${rep}` : ""}
+          </div>
+          ${d.Sinopsis ? `<p class="sinopsis">${d.Sinopsis}</p>` : ""}
+          <a href="${d.Enlace || '#'}" target="_blank" class="btn">▶ Abrir en Telegram</a>
+        </div>
+      </article>
+    `;
+  }).join("");
+  moreBtn.style.display = limite < filtrados.length ? "block" : "none";
+}
+
+document.querySelectorAll(".tab").forEach(b => {
+  b.onclick = () => {
+    document.querySelector(".tab.active").classList.remove("active");
+    b.classList.add("active");
+    catActual = b.dataset.cat;
+    aplicarFiltros();
+  };
+});
+
+search.oninput = aplicarFiltros;
+folder.onchange = aplicarFiltros;
+genre.onchange = aplicarFiltros;
+moreBtn.onclick = () => { limite += 60; pintar(); };
+</script>
+</body>
+</html>
