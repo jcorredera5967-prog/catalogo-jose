@@ -103,8 +103,17 @@ fetch(URL_CSV)
       let obj = {};
       cab.forEach((k, i) => obj[k] = (r[i] || "").trim());
       if (obj.Enlace) {
-  obj.Enlace = obj.Enlace.replace(/https?:\/\/t\.me\/?(?:c\/)?(\d+)/, "https://t.me");
+  const m = obj.Enlace.match(/(\d+)\/(\d+)(?:\/(\d+))?/);
+  if (m) {
+    const canal = m[1];
+    const tema = m[3] ? m[2] : "";
+    const post = m[3] ? m[3] : m[2];
+    obj.Enlace = tema 
+      ? `tg://privatepost?channel=${canal}&thread=${tema}&post=${post}`
+      : `tg://privatepost?channel=${canal}&post=${post}`;
+  }
 }
+
       return obj;
     }).reverse();
     cargarFiltros();
