@@ -98,7 +98,7 @@ fetch(URL_CSV)
   .then(r => r.text())
   .then(text => {
     const filas = parseCSV(text);
-    const cab = filas.map(h => h.trim());
+    const cab = filas[0].map(h => h.trim());
     datos = filas.slice(1).filter(r => r.length >= 2).map(r => {
       let obj = {};
       cab.forEach((k, i) => obj[k] = (r[i] || "").trim());
