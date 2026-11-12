@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Catálogo de Jóse M.</title>
-  <script src="https://cloudflare.com"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
     body { background: #0b0d12; color: #f3f4f6; padding: 24px 20px; }
@@ -37,7 +36,6 @@
     .btn { margin-top: auto; text-align: center; background: #2481cc; color: #fff; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; transition: 0.2s; }
     .btn:hover { background: #1b66a3; }
     .load-more { display: block; margin: 30px auto; padding: 12px 28px; background: #151922; color: #fff; border: 1px solid #262c3a; border-radius: 8px; cursor: pointer; font-weight: bold; }
-    .load-more:hover { border-color: #fff; }
   </style>
 </head>
 <body>
@@ -58,7 +56,7 @@
     <select id="folder"><option value="">Todas las carpetas / temas</option></select>
     <select id="genre"><option value="">Todos los géneros</option></select>
   </div>
-  <div class="stats" id="stats">Cargando catálogo desde Google Sheets...</div>
+  <div class="stats" id="stats">Cargando catálogo...</div>
 </header>
 
 <main class="grid" id="grid"></main>
@@ -79,27 +77,43 @@ const folder = document.getElementById("folder");
 const genre = document.getElementById("genre");
 const moreBtn = document.getElementById("moreBtn");
 
-Papa.parse(URL_CSV, {
-  download: true,
-  header: true,
-  skipEmptyLines: true,
-  complete: function(res) {
-    datos = res.data.map(d => {
-      if (d.Enlace) {
-        d.Enlace = d.Enlace.replace(/https:\/\/t\.me(\d+)/, "https://t.me");
-      }
-      return d;
+function parseCSV(str) {
+  const arr = [];
+  let quote = false;
+  let row = [], col = '';
+  for (let c = 0; c < str.length; c++) {
+    let cc = str[c], nc = str[c+1];
+    if (cc == '"' && quote && nc == '"') { col += cc; ++c; continue; }
+    if (cc == '"') { quote = !quote; continue; }
+    if (cc == ',' && !quote) { row.push(col); col = ''; continue; }
+    if (cc == '\r' && nc == '\n' && !quote) { row.push(col); arr.push(row); col = ''; row = []; ++c; continue; }
+    if ((cc == '\n' || cc == '\r') && !quote) { row.push(col); arr.push(row); col = ''; row = []; continue; }
+    col += cc;
+  }
+  if (col || row.length) { row.push(col); arr.push(row); }
+  return arr;
+}
+
+fetch(URL_CSV)
+  .then(r => r.text())
+  .then(text => {
+    const filas = parseCSV(text);
+    const cab = filas.map(h => h.trim());
+    datos = filas.slice(1).filter(r => r.length >= 2).map(r => {
+      let obj = {};
+      cab.forEach((k, i) => obj[k] = (r[i] || "").trim());
+      if (obj.Enlace) obj.Enlace = obj.Enlace.replace(/https:\/\/t\.me(\d+)/, "https://t.me");
+      return obj;
     }).reverse();
     cargarFiltros();
     aplicarFiltros();
-  },
-  error: function() {
-    stats.textContent = "Error al conectar con Google Sheets. Revisa tu conexión a internet.";
-  }
-});
+  })
+  .catch(err => {
+    stats.textContent = "Error al cargar los datos: " + err.message;
+  });
 
 function cargarFiltros() {
-  [...new Set(datos.map(d => (d.Carpeta || "").trim()).filter(Boolean))].sort().forEach(c => {
+  [...new Set(datos.map(d => d.Carpeta).filter(Boolean))].sort().forEach(c => {
     folder.innerHTML += `<option value="${c}">${c}</option>`;
   });
   const genSet = new Set();
@@ -119,8 +133,8 @@ function aplicarFiltros() {
   const g = genre.value.toLowerCase();
 
   filtrados = datos.filter(d => {
-    const okCat = catActual === "Todos" || (d.Categoría || "").trim() === catActual;
-    const okFol = !f || (d.Carpeta || "").trim() === f;
+    const okCat = catActual === "Todos" || d.Categoría === catActual;
+    const okFol = !f || d.Carpeta === f;
     const genNorm = (d.Género || "").replace(/_/g, " ").toLowerCase();
     const okGen = !g || genNorm.includes(g);
     const texto = ((d.Título || "") + " " + (d.Director || "") + " " + (d.Reparto || "") + " " + (d.Sinopsis || "")).replace(/_/g, " ").toLowerCase();
