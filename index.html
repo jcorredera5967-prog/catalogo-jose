@@ -19,7 +19,7 @@
     input { flex: 1; min-width: 250px; }
     input:focus, select:focus { border-color: #e50914; }
     .stats { color: #9ca3af; font-size: 13px; margin-bottom: 20px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(305px, 1fr)); gap: 22px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 22px; }
     .card { background: #151922; border: 1px solid #262c3a; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s; }
     .card:hover { transform: translateY(-4px); border-color: #3b4458; }
     .poster { position: relative; aspect-ratio: 16 / 9; background: linear-gradient(135deg, #1a202c 0%, #0f131a 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -32,6 +32,11 @@
     .genre { font-size: 12px; color: #60a5fa; font-weight: 600; margin-bottom: 8px; }
     .credits { font-size: 12px; color: #9ca3af; margin-bottom: 10px; line-height: 1.4; }
     .credits b { color: #d1d5db; }
+    .cast-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; scrollbar-width: thin; }
+    .actor { flex: 0 0 54px; text-align: center; }
+    .actor img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 1px solid #374151; background: #1f2937; margin: 0 auto 4px; display: block; }
+    .actor-placeholder { width: 46px; height: 46px; border-radius: 50%; background: #1f2937; border: 1px solid #374151; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #9ca3af; font-weight: bold; }
+    .actor span { display: block; font-size: 10px; color: #cbd5e1; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .sinopsis { font-size: 13px; color: #cbd5e1; line-height: 1.4; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .btn { margin-top: auto; text-align: center; background: #2481cc; color: #fff; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; transition: 0.2s; }
     .btn:hover { background: #1b66a3; }
@@ -61,6 +66,7 @@
 
 <main class="grid" id="grid"></main>
 <button class="load-more" id="moreBtn" style="display:none;">Cargar más títulos</button>
+<footer style="text-align:center; color:#6b7280; font-size:12px; margin-top:40px; padding-bottom:20px;">Datos e imágenes proporcionados por TMDB</footer>
 
 <script>
 const URL_CSV = "datos.csv";
@@ -94,33 +100,33 @@ function parseCSV(str) {
   return arr;
 }
 
-fetch(URL_CSV)
-  .then(r => r.text())
+fetch(URL_CSV + "?v=" + Date.now())
+  .then(r => {
+    if (!r.ok) throw new Error("No se encontró datos.csv (" + r.status + ")");
+    return r.text();
+  })
   .then(text => {
     const filas = parseCSV(text);
-    const cab = filas[0].map(h => h.trim());
+    const cab = filas.map(h => h.replace(/^\uFEFF/, "").trim());
     datos = filas.slice(1).filter(r => r.length >= 2).map(r => {
       let obj = {};
       cab.forEach((k, i) => obj[k] = (r[i] || "").trim());
       if (obj.Enlace) {
-  const m = obj.Enlace.match(/(\d+)\/(\d+)(?:\/(\d+))?/);
-  if (m) {
-    const canal = m[1];
-    const tema = m[3] ? m[2] : "";
-    const post = m[3] ? m[3] : m[2];
-    obj.Enlace = tema 
-      ? `tg://privatepost?channel=${canal}&thread=${tema}&post=${post}`
-      : `tg://privatepost?channel=${canal}&post=${post}`;
-  }
-}
-
+        const nums = obj.Enlace.match(/\d+/g);
+        if (nums && nums.length >= 2) {
+          const [canal, p1, p2] = nums;
+          obj.Enlace = p2
+            ? "tg://privatepost?channel=" + canal + "&thread=" + p1 + "&post=" + p2
+            : "tg://privatepost?channel=" + canal + "&post=" + p1;
+        }
+      }
       return obj;
     }).reverse();
     cargarFiltros();
     aplicarFiltros();
   })
   .catch(err => {
-    stats.textContent = "Error al cargar los datos: " + err.message;
+    stats.textContent = "Error: " + err.message;
   });
 
 function cargarFiltros() {
@@ -156,55 +162,31 @@ function aplicarFiltros() {
   pintar();
 }
 
+function pintarCast(d) {
+  if (!d.Reparto_Fotos) {
+    const rep = (d.Reparto || "").replace(/#/g, "").replace(/_/g, " ");
+    return rep ? `<div class="credits"><b>Reparto:</b> ${rep}</div>` : "";
+  }
+  const items = d.Reparto_Fotos.split("||").map(par => {
+    const [nombre, foto] = par.split("::");
+    if (!nombre) return "";
+    const inicial = nombre.trim().charAt(0).toUpperCase();
+    const media = foto
+      ? `<img src="${foto}" loading="lazy" alt="${nombre}" onerror="this.outerHTML='<div class=\\'actor-placeholder\\'>${inicial}</div>'">`
+      : `<div class="actor-placeholder">${inicial}</div>`;
+    return `<div class="actor">${media}<span>${nombre}</span></div>`;
+  }).join("");
+  return `<div class="cast-row">${items}</div>`;
+}
+
 function pintar() {
   const trozo = filtrados.slice(0, limite);
   stats.textContent = "Mostrando " + trozo.length + " de " + filtrados.length + " títulos";
   grid.innerHTML = trozo.map(d => {
     const dir = (d.Director || "").replace(/#/g, "").replace(/_/g, " ");
-    const rep = (d.Reparto || "").replace(/#/g, "").replace(/_/g, " ");
     const gen = (d.Género || "").replace(/#/g, "").replace(/_/g, " ");
     const imgHtml = d.Imagen 
       ? `<img src="${d.Imagen}" loading="lazy" alt="${d.Título || ''}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><span class="no-img-text" style="display:none;">🎬 ${d.Título || ''}</span>`
       : `<span class="no-img-text">🎬 ${d.Título || ''}</span>`;
 
     return `
-      <article class="card">
-        <div class="poster">
-          <span class="b-left">📁 ${d.Carpeta || ""}</span>
-          <span class="b-right">${d.Categoría || ""}</span>
-          ${imgHtml}
-        </div>
-        <div class="body">
-          <div class="title">${d.Título || ""}</div>
-          ${gen ? `<div class="genre">${gen}</div>` : ""}
-          <div class="credits">
-            ${dir ? `<b>Dirección:</b> ${dir}<br>` : ""}
-            ${rep ? `<b>Reparto:</b> ${rep}` : ""}
-          </div>
-          ${d.Sinopsis ? `<p class="sinopsis">${d.Sinopsis}</p>` : ""}
-          <a href="${d.Enlace || '#'}" target="_blank" class="btn">▶ Abrir en Telegram</a>
-        </div>
-      </article>
-    `;
-  }).join("");
-  moreBtn.style.display = limite < filtrados.length ? "block" : "none";
-}
-
-document.querySelectorAll(".tab").forEach(b => {
-  b.onclick = () => {
-    document.querySelector(".tab.active").classList.remove("active");
-    b.classList.add("active");
-    catActual = b.dataset.cat;
-    aplicarFiltros();
-  };
-});
-
-search.oninput = aplicarFiltros;
-folder.onchange = aplicarFiltros;
-genre.onchange = aplicarFiltros;
-moreBtn.onclick = () => { limite += 60; pintar(); };
-</script>
-<footer style="text-align:center; color:#6b7280; font-size:12px; margin-top:40px; padding-bottom:20px;">Datos e imágenes proporcionados por TMDB</footer>
-
-</body>
-</html>
