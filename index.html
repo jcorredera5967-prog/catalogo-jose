@@ -61,7 +61,7 @@
     <select id="folder"><option value="">Todas las carpetas / temas</option></select>
     <select id="genre"><option value="">Todos los géneros</option></select>
   </div>
-  <div class="stats" id="stats">Conectando con datos.csv...</div>
+  <div class="stats" id="stats">Iniciando lector...</div>
 </header>
 
 <main class="grid" id="grid"></main>
@@ -70,6 +70,9 @@
 
 <script>
 const URL_CSV = "datos.csv";
+const LF = String.fromCharCode(10);
+const CR = String.fromCharCode(13);
+const BOM = String.fromCharCode(65279);
 
 let datos = new Array();
 let filtrados = new Array();
@@ -94,28 +97,26 @@ function parseCSV(str) {
     if (cc === '"' && quote && nc === '"') { col += cc; ++c; continue; }
     if (cc === '"') { quote = !quote; continue; }
     if (cc === ',' && !quote) { row.push(col); col = ""; continue; }
-    if (cc === '\r' && nc === '\n' && !quote) { row.push(col); arr.push(row); col = ""; row = new Array(); ++c; continue; }
-    if ((cc === '\n' || cc === '\r') && !quote) { row.push(col); arr.push(row); col = ""; row = new Array(); continue; }
+    if (cc === CR && nc === LF && !quote) { row.push(col); arr.push(row); col = ""; row = new Array(); ++c; continue; }
+    if ((cc === LF || cc === CR) && !quote) { row.push(col); arr.push(row); col = ""; row = new Array(); continue; }
     col += cc;
   }
   if (col || row.length) { row.push(col); arr.push(row); }
   return arr;
 }
 
-fetch(URL_CSV)
+stats.textContent = "Descargando datos.csv...";
+
+fetch(URL_CSV + "?t=" + Date.now())
   .then(r => {
-    stats.textContent = "Descargando catálogo (" + r.status + ")...";
-    if (!r.ok) throw new Error("No se encontró datos.csv (" + r.status + ")");
+    if (!r.ok) throw new Error("Error HTTP " + r.status);
     return r.text();
   })
   .then(text => {
-    stats.textContent = "Procesando filas...";
+    stats.textContent = "Analizando catálogo...";
     const filas = parseCSV(text);
-    if (!filas || filas.length < 2) {
-      throw new Error("El archivo tiene " + (filas ? filas.length : 0) + " filas.");
-    }
-    const primeraFila = filas.shift();
-    const cab = primeraFila.map(h => h.replace(/^\uFEFF/, "").trim());
+    const primeraFila = filas.shift() || new Array();
+    const cab = primeraFila.map(h => h.split(BOM).join("").trim());
     datos = filas.filter(r => r.length >= 2).map(r => {
       let obj = {};
       cab.forEach((k, i) => {
@@ -139,7 +140,7 @@ fetch(URL_CSV)
     aplicarFiltros();
   })
   .catch(err => {
-    stats.textContent = "Aviso: " + err.message;
+    stats.textContent = "Error: " + err.message;
   });
 
 function cargarFiltros() {
@@ -149,7 +150,7 @@ function cargarFiltros() {
   const genSet = new Set();
   datos.forEach(d => {
     if (d.Género) {
-      d.Género.split(/[|·#]/).map(g => g.replace(/_/g, " ").trim()).filter(g => g.length > 2).forEach(g => genSet.add(g));
+      d.Género.split(/[|·#]/).map(g => g.split("_").join(" ").trim()).filter(g => g.length > 2).forEach(g => genSet.add(g));
     }
   });
   Array.from(genSet).sort().forEach(g => {
@@ -165,9 +166,9 @@ function aplicarFiltros() {
   filtrados = datos.filter(d => {
     const okCat = catActual === "Todos" || d.Categoría === catActual;
     const okFol = !f || d.Carpeta === f;
-    const genNorm = (d.Género || "").replace(/_/g, " ").toLowerCase();
+    const genNorm = (d.Género || "").split("_").join(" ").toLowerCase();
     const okGen = !g || genNorm.includes(g);
-    const texto = ((d.Título || "") + " " + (d.Director || "") + " " + (d.Reparto || "") + " " + (d.Sinopsis || "")).replace(/_/g, " ").toLowerCase();
+    const texto = ((d.Título || "") + " " + (d.Director || "") + " " + (d.Reparto || "") + " " + (d.Sinopsis || "")).split("_").join(" ").toLowerCase();
     return okCat && okFol && okGen && (!q || texto.includes(q));
   });
 
@@ -177,7 +178,7 @@ function aplicarFiltros() {
 
 function pintarCast(d) {
   if (!d.Reparto_Fotos) {
-    const rep = (d.Reparto || "").replace(/#/g, "").replace(/_/g, " ");
+    const rep = (d.Reparto || "").split("#").join("").split("_").join(" ");
     return rep ? `<div class="credits"><b>Reparto:</b> ${rep}</div>` : "";
   }
   const items = d.Reparto_Fotos.split("||").map(par => {
@@ -187,7 +188,7 @@ function pintarCast(d) {
     if (!nombre) return "";
     const inicial = nombre.charAt(0).toUpperCase();
     const media = foto
-      ? `<img src="${foto}" loading="lazy" alt="${nombre}" onerror="this.outerHTML='<div class=\\'actor-placeholder\\'>${inicial}</div>'">`
+      ? `<img src="${foto}" loading="lazy" alt="${nombre}">`
       : `<div class="actor-placeholder">${inicial}</div>`;
     return `<div class="actor">${media}<span>${nombre}</span></div>`;
   }).join("");
@@ -195,3 +196,4 @@ function pintarCast(d) {
 }
 
 function pintar() {
+  const trozo = filtrados.slice(0, limite);
