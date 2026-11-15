@@ -61,7 +61,7 @@
     <select id="folder"><option value="">Todas las carpetas / temas</option></select>
     <select id="genre"><option value="">Todos los géneros</option></select>
   </div>
-  <div class="stats" id="stats">Cargando catálogo...</div>
+  <div class="stats" id="stats">Conectando con datos.csv...</div>
 </header>
 
 <main class="grid" id="grid"></main>
@@ -102,24 +102,32 @@ function parseCSV(str) {
   return arr;
 }
 
-fetch(URL_CSV + "?v=" + Date.now())
+fetch(URL_CSV)
   .then(r => {
+    stats.textContent = "Descargando catálogo (" + r.status + ")...";
     if (!r.ok) throw new Error("No se encontró datos.csv (" + r.status + ")");
     return r.text();
   })
   .then(text => {
+    stats.textContent = "Procesando filas...";
     const filas = parseCSV(text);
-    const primeraFila = filas.at(0) || new Array();
+    if (!filas || filas.length < 2) {
+      throw new Error("El archivo tiene " + (filas ? filas.length : 0) + " filas.");
+    }
+    const primeraFila = filas.shift();
     const cab = primeraFila.map(h => h.replace(/^\uFEFF/, "").trim());
-    datos = filas.slice(1).filter(r => r.length >= 2).map(r => {
+    datos = filas.filter(r => r.length >= 2).map(r => {
       let obj = {};
-      cab.forEach((k, i) => { obj[k] = (r.at(i) || "").trim(); });
+      cab.forEach((k, i) => {
+        const val = r.slice(i, i + 1).join("");
+        obj[k] = val ? val.trim() : "";
+      });
       if (obj.Enlace) {
         const nums = obj.Enlace.match(/\d+/g);
         if (nums && nums.length >= 2) {
-          const canal = nums.at(0);
-          const p1 = nums.at(1);
-          const p2 = nums.at(2);
+          const canal = nums.slice(0, 1).join("");
+          const p1 = nums.slice(1, 2).join("");
+          const p2 = nums.slice(2, 3).join("");
           obj.Enlace = p2
             ? "tg://privatepost?channel=" + canal + "&thread=" + p1 + "&post=" + p2
             : "tg://privatepost?channel=" + canal + "&post=" + p1;
@@ -131,7 +139,7 @@ fetch(URL_CSV + "?v=" + Date.now())
     aplicarFiltros();
   })
   .catch(err => {
-    stats.textContent = "Error al cargar: " + err.message;
+    stats.textContent = "Aviso: " + err.message;
   });
 
 function cargarFiltros() {
@@ -174,8 +182,8 @@ function pintarCast(d) {
   }
   const items = d.Reparto_Fotos.split("||").map(par => {
     const partes = par.split("::");
-    const nombre = (partes.at(0) || "").trim();
-    const foto = (partes.at(1) || "").trim();
+    const nombre = (partes.slice(0, 1).join("") || "").trim();
+    const foto = (partes.slice(1, 2).join("") || "").trim();
     if (!nombre) return "";
     const inicial = nombre.charAt(0).toUpperCase();
     const media = foto
@@ -187,8 +195,3 @@ function pintarCast(d) {
 }
 
 function pintar() {
-  const trozo = filtrados.slice(0, limite);
-  stats.textContent = "Mostrando " + trozo.length + " de " + filtrados.length + " títulos";
-  grid.innerHTML = trozo.map(d => {
-    const dir = (d.Director || "").replace(/#/g, "").replace(/_/g, " ");
-    const gen = (d.Género || "").replace(/#/g, "").replace(/_/g, " ");
