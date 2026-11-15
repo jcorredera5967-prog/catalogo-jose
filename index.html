@@ -71,8 +71,8 @@
 <script>
 const URL_CSV = "datos.csv";
 
-let datos = [];
-let filtrados = [];
+let datos = new Array();
+let filtrados = new Array();
 let catActual = "Todos";
 let limite = 60;
 
@@ -84,16 +84,18 @@ const genre = document.getElementById("genre");
 const moreBtn = document.getElementById("moreBtn");
 
 function parseCSV(str) {
-  const arr = [];
+  const arr = new Array();
   let quote = false;
-  let row = [], col = '';
+  let row = new Array();
+  let col = "";
   for (let c = 0; c < str.length; c++) {
-    let cc = str[c], nc = str[c+1];
-    if (cc == '"' && quote && nc == '"') { col += cc; ++c; continue; }
-    if (cc == '"') { quote = !quote; continue; }
-    if (cc == ',' && !quote) { row.push(col); col = ''; continue; }
-    if (cc == '\r' && nc == '\n' && !quote) { row.push(col); arr.push(row); col = ''; row = []; ++c; continue; }
-    if ((cc == '\n' || cc == '\r') && !quote) { row.push(col); arr.push(row); col = ''; row = []; continue; }
+    let cc = str.charAt(c);
+    let nc = str.charAt(c + 1);
+    if (cc === '"' && quote && nc === '"') { col += cc; ++c; continue; }
+    if (cc === '"') { quote = !quote; continue; }
+    if (cc === ',' && !quote) { row.push(col); col = ""; continue; }
+    if (cc === '\r' && nc === '\n' && !quote) { row.push(col); arr.push(row); col = ""; row = new Array(); ++c; continue; }
+    if ((cc === '\n' || cc === '\r') && !quote) { row.push(col); arr.push(row); col = ""; row = new Array(); continue; }
     col += cc;
   }
   if (col || row.length) { row.push(col); arr.push(row); }
@@ -107,15 +109,17 @@ fetch(URL_CSV + "?v=" + Date.now())
   })
   .then(text => {
     const filas = parseCSV(text);
-    const cab = filas[0].map(h => h.replace(/^\uFEFF/, "").trim());
-
+    const primeraFila = filas.at(0) || new Array();
+    const cab = primeraFila.map(h => h.replace(/^\uFEFF/, "").trim());
     datos = filas.slice(1).filter(r => r.length >= 2).map(r => {
       let obj = {};
-      cab.forEach((k, i) => obj[k] = (r[i] || "").trim());
+      cab.forEach((k, i) => { obj[k] = (r.at(i) || "").trim(); });
       if (obj.Enlace) {
         const nums = obj.Enlace.match(/\d+/g);
         if (nums && nums.length >= 2) {
-          const [canal, p1, p2] = nums;
+          const canal = nums.at(0);
+          const p1 = nums.at(1);
+          const p2 = nums.at(2);
           obj.Enlace = p2
             ? "tg://privatepost?channel=" + canal + "&thread=" + p1 + "&post=" + p2
             : "tg://privatepost?channel=" + canal + "&post=" + p1;
@@ -127,11 +131,11 @@ fetch(URL_CSV + "?v=" + Date.now())
     aplicarFiltros();
   })
   .catch(err => {
-    stats.textContent = "Error: " + err.message;
+    stats.textContent = "Error al cargar: " + err.message;
   });
 
 function cargarFiltros() {
-  [...new Set(datos.map(d => d.Carpeta).filter(Boolean))].sort().forEach(c => {
+  Array.from(new Set(datos.map(d => d.Carpeta).filter(Boolean))).sort().forEach(c => {
     folder.innerHTML += `<option value="${c}">${c}</option>`;
   });
   const genSet = new Set();
@@ -140,7 +144,7 @@ function cargarFiltros() {
       d.Género.split(/[|·#]/).map(g => g.replace(/_/g, " ").trim()).filter(g => g.length > 2).forEach(g => genSet.add(g));
     }
   });
-  [...genSet].sort().forEach(g => {
+  Array.from(genSet).sort().forEach(g => {
     genre.innerHTML += `<option value="${g}">${g}</option>`;
   });
 }
@@ -169,9 +173,11 @@ function pintarCast(d) {
     return rep ? `<div class="credits"><b>Reparto:</b> ${rep}</div>` : "";
   }
   const items = d.Reparto_Fotos.split("||").map(par => {
-    const [nombre, foto] = par.split("::");
+    const partes = par.split("::");
+    const nombre = (partes.at(0) || "").trim();
+    const foto = (partes.at(1) || "").trim();
     if (!nombre) return "";
-    const inicial = nombre.trim().charAt(0).toUpperCase();
+    const inicial = nombre.charAt(0).toUpperCase();
     const media = foto
       ? `<img src="${foto}" loading="lazy" alt="${nombre}" onerror="this.outerHTML='<div class=\\'actor-placeholder\\'>${inicial}</div>'">`
       : `<div class="actor-placeholder">${inicial}</div>`;
@@ -186,8 +192,3 @@ function pintar() {
   grid.innerHTML = trozo.map(d => {
     const dir = (d.Director || "").replace(/#/g, "").replace(/_/g, " ");
     const gen = (d.Género || "").replace(/#/g, "").replace(/_/g, " ");
-    const imgHtml = d.Imagen 
-      ? `<img src="${d.Imagen}" loading="lazy" alt="${d.Título || ''}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><span class="no-img-text" style="display:none;">🎬 ${d.Título || ''}</span>`
-      : `<span class="no-img-text">🎬 ${d.Título || ''}</span>`;
-
-    return `
