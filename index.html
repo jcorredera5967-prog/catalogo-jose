@@ -44,11 +44,8 @@
   </style>
 </head>
 <body>
-
 <header>
-  <div class="top">
-    <h1>🎬 Catálogo de Jóse M.</h1>
-  </div>
+  <div class="top"><h1>🎬 Catálogo de Jóse M.</h1></div>
   <div class="tabs" id="tabs">
     <button class="tab active" data-cat="Todos">Todos</button>
     <button class="tab" data-cat="Películas">1. La Videoteca</button>
@@ -61,13 +58,11 @@
     <select id="folder"><option value="">Todas las carpetas / temas</option></select>
     <select id="genre"><option value="">Todos los géneros</option></select>
   </div>
-  <div class="stats" id="stats">Iniciando sistema...</div>
+  <div class="stats" id="stats">Cargando...</div>
 </header>
-
 <main class="grid" id="grid"></main>
 <button class="load-more" id="moreBtn" style="display:none;">Cargar más títulos</button>
 <footer style="text-align:center; color:#6b7280; font-size:12px; margin-top:40px; padding-bottom:20px;">Datos e imágenes proporcionados por TMDB</footer>
-
 <script>
 const URL_CSV = "datos.csv";
 const LF = String.fromCharCode(10);
@@ -107,21 +102,18 @@ function parseCSV(str) {
   return arr;
 }
 
-stats.textContent = "Descargando catálogo...";
-
 fetch(URL_CSV + "?v=" + Date.now())
-  .then(r => {
+  .then(function(r) {
     if (!r.ok) throw new Error("Error HTTP " + r.status);
     return r.text();
   })
-  .then(text => {
-    stats.textContent = "Organizando fichas...";
+  .then(function(text) {
     const filas = parseCSV(text);
     const primeraFila = filas.shift() || new Array();
-    const cab = primeraFila.map(h => h.split(BOM).join("").trim());
-    datos = filas.filter(r => r.length >= 2).map(r => {
+    const cab = primeraFila.map(function(h) { return h.split(BOM).join("").trim(); });
+    datos = filas.filter(function(r) { return r.length >= 2; }).map(function(r) {
       let obj = {};
-      cab.forEach((k, i) => {
+      cab.forEach(function(k, i) {
         const val = r.slice(i, i + 1).join("");
         obj[k] = val ? val.trim() : "";
       });
@@ -141,22 +133,32 @@ fetch(URL_CSV + "?v=" + Date.now())
     cargarFiltros();
     aplicarFiltros();
   })
-  .catch(err => {
-    stats.textContent = "Aviso técnico: " + err.message;
+  .catch(function(err) {
+    stats.textContent = "Error: " + err.message;
   });
 
 function cargarFiltros() {
-  Array.from(new Set(datos.map(d => d.Carpeta).filter(Boolean))).sort().forEach(c => {
-    folder.innerHTML += `<option value="${c}">${c}</option>`;
+  const carpetas = Array.from(new Set(datos.map(function(d) { return d.Carpeta; }).filter(Boolean))).sort();
+  carpetas.forEach(function(c) {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    folder.appendChild(opt);
   });
   const genSet = new Set();
-  datos.forEach(d => {
+  datos.forEach(function(d) {
     if (d.Género) {
-      d.Género.split(REGEX_GEN).map(g => g.split("_").join(" ").trim()).filter(g => g.length > 2).forEach(g => genSet.add(g));
+      d.Género.split(REGEX_GEN).forEach(function(g) {
+        const clean = g.split("_").join(" ").trim();
+        if (clean.length > 2) genSet.add(clean);
+      });
     }
   });
-  Array.from(genSet).sort().forEach(g => {
-    genre.innerHTML += `<option value="${g}">${g}</option>`;
+  Array.from(genSet).sort().forEach(function(g) {
+    const opt = document.createElement("option");
+    opt.value = g;
+    opt.textContent = g;
+    genre.appendChild(opt);
   });
 }
 
@@ -165,7 +167,7 @@ function aplicarFiltros() {
   const f = folder.value;
   const g = genre.value.toLowerCase();
 
-  filtrados = datos.filter(d => {
+  filtrados = datos.filter(function(d) {
     const okCat = catActual === "Todos" || d.Categoría === catActual;
     const okFol = !f || d.Carpeta === f;
     const genNorm = (d.Género || "").split("_").join(" ").toLowerCase();
@@ -181,20 +183,64 @@ function aplicarFiltros() {
 function pintarCast(d) {
   if (!d.Reparto_Fotos) {
     const rep = (d.Reparto || "").split("#").join("").split("_").join(" ");
-    return rep ? `<div class="credits"><b>Reparto:</b> ${rep}</div>` : "";
+    return rep ? '<div class="credits"><b>Reparto:</b> ' + rep + '</div>' : "";
   }
-  const items = d.Reparto_Fotos.split("||").map(par => {
+  const items = d.Reparto_Fotos.split("||").map(function(par) {
     const partes = par.split("::");
     const nombre = (partes.slice(0, 1).join("") || "").trim();
     const foto = (partes.slice(1, 2).join("") || "").trim();
     if (!nombre) return "";
     const inicial = nombre.charAt(0).toUpperCase();
     const media = foto
-      ? `<img src="${foto}" loading="lazy" alt="${nombre}">`
-      : `<div class="actor-placeholder">${inicial}</div>`;
-    return `<div class="actor">${media}<span>${nombre}</span></div>`;
+      ? '<img src="' + foto + '" loading="lazy" alt="' + nombre + '">'
+      : '<div class="actor-placeholder">' + inicial + '</div>';
+    return '<div class="actor">' + media + '<span>' + nombre + '</span></div>';
   }).join("");
-  return `<div class="cast-row">${items}</div>`;
+  return '<div class="cast-row">' + items + '</div>';
 }
 
 function pintar() {
+  const trozo = filtrados.slice(0, limite);
+  stats.textContent = "Mostrando " + trozo.length + " de " + filtrados.length + " títulos";
+  grid.innerHTML = trozo.map(function(d) {
+    const dir = (d.Director || "").split("#").join("").split("_").join(" ");
+    const gen = (d.Género || "").split("#").join("").split("_").join(" ");
+    const imgHtml = d.Imagen 
+      ? '<img src="' + d.Imagen + '" loading="lazy" alt="' + (d.Título || '') + '">'
+      : '<span class="no-img-text">🎬 ' + (d.Título || '') + '</span>';
+
+    return '<article class="card">' +
+      '<div class="poster">' +
+        '<span class="b-left">📁 ' + (d.Carpeta || "") + '</span>' +
+        '<span class="b-right">' + (d.Categoría || "") + '</span>' +
+        imgHtml +
+      '</div>' +
+      '<div class="body">' +
+        '<div class="title">' + (d.Título || "") + '</div>' +
+        (gen ? '<div class="genre">' + gen + '</div>' : '') +
+        (dir ? '<div class="credits"><b>Dirección:</b> ' + dir + '</div>' : '') +
+        pintarCast(d) +
+        (d.Sinopsis ? '<p class="sinopsis">' + d.Sinopsis + '</p>' : '') +
+        '<a href="' + (d.Enlace || '#') + '" class="btn">▶ Abrir en Telegram</a>' +
+      '</div>' +
+    '</article>';
+  }).join("");
+  moreBtn.style.display = limite < filtrados.length ? "block" : "none";
+}
+
+document.querySelectorAll(".tab").forEach(function(b) {
+  b.onclick = function() {
+    document.querySelector(".tab.active").classList.remove("active");
+    b.classList.add("active");
+    catActual = b.dataset.cat;
+    aplicarFiltros();
+  };
+});
+
+search.oninput = aplicarFiltros;
+folder.onchange = aplicarFiltros;
+genre.onchange = aplicarFiltros;
+moreBtn.onclick = function() { limite += 60; pintar(); };
+</script>
+</body>
+</html>
