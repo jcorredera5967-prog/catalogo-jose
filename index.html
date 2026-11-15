@@ -19,26 +19,32 @@
     input { flex: 1; min-width: 250px; }
     input:focus, select:focus { border-color: #e50914; }
     .stats { color: #9ca3af; font-size: 13px; margin-bottom: 20px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 22px; }
-    .card { background: #151922; border: 1px solid #262c3a; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s; }
-    .card:hover { transform: translateY(-4px); border-color: #3b4458; }
-    .poster { position: relative; aspect-ratio: 16 / 9; background: linear-gradient(135deg, #1a202c 0%, #0f131a 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 22px; }
+    @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: #151922; border: 1px solid #262c3a; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; padding: 16px; gap: 14px; transition: transform 0.2s; }
+    .card:hover { transform: translateY(-3px); border-color: #3b4458; }
+    .card-top { display: flex; gap: 16px; align-items: flex-start; }
+    .poster { flex: 0 0 135px; aspect-ratio: 2 / 3; border-radius: 9px; overflow: hidden; background: linear-gradient(135deg, #1a202c 0%, #0f131a 100%); display: flex; align-items: center; justify-content: center; border: 1px solid #262c3a; }
     .poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .no-img-text { padding: 20px; text-align: center; font-weight: 700; color: #64748b; font-size: 14px; }
-    .b-left { position: absolute; top: 8px; left: 8px; background: rgba(11, 13, 18, 0.85); padding: 4px 9px; border-radius: 5px; font-size: 11px; font-weight: bold; z-index: 2; border: 1px solid rgba(255,255,255,0.1); }
-    .b-right { position: absolute; bottom: 8px; right: 8px; background: #e50914; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; z-index: 2; }
-    .body { padding: 15px; flex: 1; display: flex; flex-direction: column; }
-    .title { font-size: 17px; font-weight: 700; margin-bottom: 5px; color: #fff; }
-    .genre { font-size: 12px; color: #60a5fa; font-weight: 600; margin-bottom: 8px; }
-    .credits { font-size: 12px; color: #9ca3af; margin-bottom: 10px; line-height: 1.4; }
-    .credits b { color: #d1d5db; }
-    .cast-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; scrollbar-width: thin; }
-    .actor { flex: 0 0 54px; text-align: center; }
-    .actor img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 1px solid #374151; background: #1f2937; margin: 0 auto 4px; display: block; }
-    .actor-placeholder { width: 46px; height: 46px; border-radius: 50%; background: #1f2937; border: 1px solid #374151; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #9ca3af; font-weight: bold; }
-    .actor span { display: block; font-size: 10px; color: #cbd5e1; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .sinopsis { font-size: 13px; color: #cbd5e1; line-height: 1.4; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .btn { margin-top: auto; text-align: center; background: #2481cc; color: #fff; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; transition: 0.2s; }
+    .no-img-text { padding: 10px; text-align: center; font-weight: 700; color: #64748b; font-size: 12px; }
+    .info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .b-cat { background: #e50914; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .b-fol { background: #1f2937; color: #cbd5e1; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #374151; }
+    .title { font-size: 18px; font-weight: 800; margin-bottom: 4px; color: #fff; line-height: 1.25; }
+    .genre { font-size: 12px; color: #60a5fa; font-weight: 600; margin-bottom: 6px; }
+    .credits { font-size: 12px; color: #9ca3af; margin-bottom: 8px; }
+    .credits b { color: #e5e7eb; }
+    .sinopsis-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; margin-bottom: 3px; }
+    .sinopsis { font-size: 13px; color: #d1d5db; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+    .cast-section { border-top: 1px solid #262c3a; padding-top: 12px; }
+    .cast-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; margin-bottom: 8px; }
+    .cast-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+    .actor { flex: 0 0 64px; text-align: center; }
+    .actor img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 1px solid #374151; background: #1f2937; margin: 0 auto 4px; display: block; }
+    .actor-placeholder { width: 52px; height: 52px; border-radius: 50%; background: #1f2937; border: 1px solid #374151; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #9ca3af; font-weight: bold; }
+    .actor span { display: block; font-size: 11px; color: #e5e7eb; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .btn { text-align: center; background: #2481cc; color: #fff; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; transition: 0.2s; margin-top: auto; }
     .btn:hover { background: #1b66a3; }
     .load-more { display: block; margin: 30px auto; padding: 12px 28px; background: #151922; color: #fff; border: 1px solid #262c3a; border-radius: 8px; cursor: pointer; font-weight: bold; }
   </style>
@@ -138,8 +144,7 @@ fetch(URL_CSV + "?v=" + Date.now())
   });
 
 function cargarFiltros() {
-  const carpetas = Array.from(new Set(datos.map(function(d) { return d.Carpeta; }).filter(Boolean))).sort();
-  carpetas.forEach(function(c) {
+  Array.from(new Set(datos.map(function(d) { return d.Carpeta; }).filter(Boolean))).sort().forEach(function(c) {
     const opt = document.createElement("option");
     opt.value = c;
     opt.textContent = c;
@@ -183,7 +188,7 @@ function aplicarFiltros() {
 function pintarCast(d) {
   if (!d.Reparto_Fotos) {
     const rep = (d.Reparto || "").split("#").join("").split("_").join(" ");
-    return rep ? '<div class="credits"><b>Reparto:</b> ' + rep + '</div>' : "";
+    return rep ? '<div class="cast-section"><div class="cast-title">Reparto principal</div><div class="credits">' + rep + '</div></div>' : "";
   }
   const items = d.Reparto_Fotos.split("||").map(function(par) {
     const partes = par.split("::");
@@ -196,7 +201,7 @@ function pintarCast(d) {
       : '<div class="actor-placeholder">' + inicial + '</div>';
     return '<div class="actor">' + media + '<span>' + nombre + '</span></div>';
   }).join("");
-  return '<div class="cast-row">' + items + '</div>';
+  return '<div class="cast-section"><div class="cast-title">Reparto principal</div><div class="cast-row">' + items + '</div></div>';
 }
 
 function pintar() {
@@ -210,19 +215,21 @@ function pintar() {
       : '<span class="no-img-text">🎬 ' + (d.Título || '') + '</span>';
 
     return '<article class="card">' +
-      '<div class="poster">' +
-        '<span class="b-left">📁 ' + (d.Carpeta || "") + '</span>' +
-        '<span class="b-right">' + (d.Categoría || "") + '</span>' +
-        imgHtml +
+      '<div class="card-top">' +
+        '<div class="poster">' + imgHtml + '</div>' +
+        '<div class="info">' +
+          '<div class="badges">' +
+            '<span class="b-cat">' + (d.Categoría || "") + '</span>' +
+            '<span class="b-fol">📁 ' + (d.Carpeta || "") + '</span>' +
+          '</div>' +
+          '<div class="title">' + (d.Título || "") + '</div>' +
+          (gen ? '<div class="genre">' + gen + '</div>' : '') +
+          (dir ? '<div class="credits"><b>Dirección:</b> ' + dir + '</div>' : '') +
+          (d.Sinopsis ? '<div class="sinopsis-label">Vista general</div><p class="sinopsis">' + d.Sinopsis + '</p>' : '') +
+        '</div>' +
       '</div>' +
-      '<div class="body">' +
-        '<div class="title">' + (d.Título || "") + '</div>' +
-        (gen ? '<div class="genre">' + gen + '</div>' : '') +
-        (dir ? '<div class="credits"><b>Dirección:</b> ' + dir + '</div>' : '') +
-        pintarCast(d) +
-        (d.Sinopsis ? '<p class="sinopsis">' + d.Sinopsis + '</p>' : '') +
-        '<a href="' + (d.Enlace || '#') + '" class="btn">▶ Abrir en Telegram</a>' +
-      '</div>' +
+      pintarCast(d) +
+      '<a href="' + (d.Enlace || '#') + '" class="btn">▶ Abrir en Telegram</a>' +
     '</article>';
   }).join("");
   moreBtn.style.display = limite < filtrados.length ? "block" : "none";
