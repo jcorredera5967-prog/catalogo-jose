@@ -89,10 +89,7 @@ let catActual = "Todos";
 let limite = 60;
 let favoritas = new Array();
 
-try {
-  const raw = localStorage.getItem(STORAGE_FAV);
-  if (raw) favoritas = JSON.parse(raw);
-} catch (e) {}
+try { const raw = localStorage.getItem(STORAGE_FAV); if (raw) favoritas = JSON.parse(raw); } catch (e) {}
 
 const grid = document.getElementById("grid");
 const stats = document.getElementById("stats");
@@ -102,9 +99,7 @@ const genre = document.getElementById("genre");
 const moreBtn = document.getElementById("moreBtn");
 const tabFav = document.getElementById("tabFav");
 
-function actualizarContadorFav() {
-  tabFav.textContent = "⭐ Mis Favoritas (" + favoritas.length + ")";
-}
+function actualizarContadorFav() { tabFav.textContent = "⭐ Mis Favoritas (" + favoritas.length + ")"; }
 
 function toggleFavorita(id) {
   const idx = favoritas.indexOf(id);
@@ -131,7 +126,6 @@ function parseCSV(str) {
   if (col || row.length) { row.push(col); arr.push(row); }
   return arr;
 }
-
 actualizarContadorFav();
 
 fetch(URL_CSV + "?v=" + Date.now())
@@ -142,10 +136,7 @@ fetch(URL_CSV + "?v=" + Date.now())
     const cab = primeraFila.map(function(h) { return h.split(BOM).join("").trim(); });
     datos = filas.filter(function(r) { return r.length >= 2; }).map(function(r) {
       let obj = {};
-      cab.forEach(function(k, i) {
-        const val = r.slice(i, i + 1).join("");
-        obj[k] = val ? val.trim() : "";
-      });
+      cab.forEach(function(k, i) { const val = r.slice(i, i + 1).join(""); obj[k] = val ? val.trim() : ""; });
       if (obj.Enlace) {
         const nums = obj.Enlace.match(REGEX_NUMS);
         if (nums && nums.length >= 2) {
@@ -167,4 +158,72 @@ fetch(URL_CSV + "?v=" + Date.now())
 
 function cargarFiltros() {
   Array.from(new Set(datos.map(function(d) { return d.Carpeta; }).filter(Boolean))).sort().forEach(function(c) {
-    const opt = document.createElement("option");
+    const opt = document.createElement("option"); opt.value = c; opt.textContent = c; folder.appendChild(opt);
+  });
+  const genSet = new Set();
+  datos.forEach(function(d) {
+    if (d.Género) d.Género.split(REGEX_GEN).forEach(function(g) { const clean = g.split("_").join(" ").trim(); if (clean.length > 2) genSet.add(clean); });
+  });
+  Array.from(genSet).sort().forEach(function(g) {
+    const opt = document.createElement("option"); opt.value = g; opt.textContent = g; genre.appendChild(opt);
+  });
+}
+
+function aplicarFiltros() {
+  const q = search.value.toLowerCase(), f = folder.value, g = genre.value.toLowerCase();
+  filtrados = datos.filter(function(d) {
+    const okCat = catActual === "Favoritas" ? favoritas.indexOf(d._id) !== -1 : (catActual === "Todos" || d.Categoría === catActual);
+    const okFol = !f || d.Carpeta === f;
+    const genNorm = (d.Género || "").split("_").join(" ").toLowerCase();
+    const okGen = !g || genNorm.includes(g);
+    const texto = ((d.Título || "") + " " + (d.Director || "") + " " + (d.Reparto || "") + " " + (d.Sinopsis || "")).split("_").join(" ").toLowerCase();
+    return okCat && okFol && okGen && (!q || texto.includes(q));
+  });
+  limite = 60; pintar();
+}
+
+function pintarCast(d) {
+  if (!d.Reparto_Fotos) {
+    const rep = (d.Reparto || "").split("#").join("").split("_").join(" ");
+    return rep ? '<div class="cast-section"><div class="cast-title">Reparto principal</div><div class="credits">' + rep + '</div></div>' : "";
+  }
+  const items = d.Reparto_Fotos.split("||").map(function(par) {
+    const partes = par.split("::");
+    const nombre = (partes.slice(0, 1).join("") || "").trim(), foto = (partes.slice(1, 2).join("") || "").trim();
+    if (!nombre) return "";
+    const media = foto ? '<img src="' + foto + '" loading="lazy" alt="' + nombre + '">' : '<div class="actor-placeholder">' + nombre.charAt(0).toUpperCase() + '</div>';
+    return '<div class="actor">' + media + '<span>' + nombre + '</span></div>';
+  }).join("");
+  return '<div class="cast-section"><div class="cast-title">Reparto principal</div><div class="cast-row">' + items + '</div></div>';
+}
+
+function pintar() {
+  const trozo = filtrados.slice(0, limite);
+  stats.textContent = (catActual === "Favoritas" && filtrados.length === 0)
+    ? "Aún no tienes títulos guardados. Pulsa '☆ Seguir' en cualquier ficha para añadirla aquí."
+    : "Mostrando " + trozo.length + " de " + filtrados.length + " títulos";
+  grid.innerHTML = trozo.map(function(d, index) {
+    const dir = (d.Director || "").split("#").join("").split("_").join(" ");
+    const gen = (d.Género || "").split("#").join("").split("_").join(" ");
+    const esFav = favoritas.indexOf(d._id) !== -1;
+    const imgHtml = d.Imagen ? '<img src="' + d.Imagen + '" loading="lazy" alt="' + (d.Título || '') + '">' : '<span class="no-img-text">🎬 ' + (d.Título || '') + '</span>';
+    return '<article class="card"><div class="card-top"><div class="poster">' + imgHtml + '</div><div class="info"><div class="badges"><span class="b-cat">' + (d.Categoría || "") + '</span><span class="b-fol">📁 ' + (d.Carpeta || "") + '</span><button type="button" class="fav-btn' + (esFav ? ' is-fav' : '') + '" data-idx="' + index + '">' + (esFav ? '⭐ Siguiendo' : '☆ Seguir') + '</button></div><div class="title">' + (d.Título || "") + '</div>' + (gen ? '<div class="genre">' + gen + '</div>' : '') + (dir ? '<div class="credits"><b>Dirección:</b> ' + dir + '</div>' : '') + (d.Sinopsis ? '<div class="sinopsis-label">Vista general</div><p class="sinopsis">' + d.Sinopsis + '</p>' : '') + '</div></div>' + pintarCast(d) + '<a href="' + (d.Enlace || '#') + '" class="btn">▶ Abrir en Telegram</a></article>';
+  }).join("");
+  grid.querySelectorAll(".fav-btn").forEach(function(btn) {
+    btn.onclick = function() {
+      const idx = parseInt(btn.getAttribute("data-idx"), 10);
+      const item = trozo.slice(idx, idx + 1).shift();
+      if (item) toggleFavorita(item._id);
+    };
+  });
+  moreBtn.style.display = limite < filtrados.length ? "block" : "none";
+}
+
+document.querySelectorAll(".tab").forEach(function(b) {
+  b.onclick = function() { document.querySelector(".tab.active").classList.remove("active"); b.classList.add("active"); catActual = b.dataset.cat; aplicarFiltros(); };
+});
+search.oninput = aplicarFiltros; folder.onchange = aplicarFiltros; genre.onchange = aplicarFiltros;
+moreBtn.onclick = function() { limite += 60; pintar(); };
+</script>
+</body>
+</html>
