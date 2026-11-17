@@ -51,6 +51,9 @@
     .btn { text-align: center; background: #2481cc; color: #fff; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; transition: 0.2s; margin-top: auto; }
     .btn:hover { background: #1b66a3; }
     .load-more { display: block; margin: 30px auto; padding: 12px 28px; background: #151922; color: #fff; border: 1px solid #262c3a; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    .b-new { background: #10b981; color: #052e16; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 800; }
+    .btn-rnd { background: #7c3aed; color: #fff; border: 1px solid #8b5cf6; padding: 11px 15px; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+    .btn-rnd:hover { background: #6d28d9; }
   </style>
 </head>
 <body>
@@ -68,6 +71,7 @@
     <input type="text" id="search" placeholder="Buscar por título, actor, director o sinopsis...">
     <select id="folder"><option value="">Todas las carpetas / temas</option></select>
     <select id="genre"><option value="">Todos los géneros</option></select>
+    <button type="button" class="btn-rnd" id="rndBtn">🎲 ¿Qué veo hoy?</button>
   </div>
   <div class="stats" id="stats">Cargando...</div>
 </header>
@@ -148,9 +152,11 @@ fetch(URL_CSV + "?v=" + Date.now())
             : "tg://privatepost?channel=" + canal + "&post=" + p1;
         }
       }
+      obj._esNuevo = false;
       obj._id = (obj.Categoría || "") + "|" + (obj.Título || "") + "|" + (obj.Enlace || "");
       return obj;
     }).reverse();
+    datos.slice(0, 20).forEach(function(item) { item._esNuevo = true; });
     cargarFiltros();
     aplicarFiltros();
   })
@@ -207,7 +213,7 @@ function pintar() {
     const gen = (d.Género || "").split("#").join("").split("_").join(" ");
     const esFav = favoritas.indexOf(d._id) !== -1;
     const imgHtml = d.Imagen ? '<img src="' + d.Imagen + '" loading="lazy" alt="' + (d.Título || '') + '">' : '<span class="no-img-text">🎬 ' + (d.Título || '') + '</span>';
-    return '<article class="card"><div class="card-top"><div class="poster">' + imgHtml + '</div><div class="info"><div class="badges"><span class="b-cat">' + (d.Categoría || "") + '</span><span class="b-fol">📁 ' + (d.Carpeta || "") + '</span><button type="button" class="fav-btn' + (esFav ? ' is-fav' : '') + '" data-idx="' + index + '">' + (esFav ? '⭐ Siguiendo' : '☆ Seguir') + '</button></div><div class="title">' + (d.Título || "") + '</div>' + (gen ? '<div class="genre">' + gen + '</div>' : '') + (dir ? '<div class="credits"><b>Dirección:</b> ' + dir + '</div>' : '') + (d.Sinopsis ? '<div class="sinopsis-label">Vista general</div><p class="sinopsis">' + d.Sinopsis + '</p>' : '') + '</div></div>' + pintarCast(d) + '<a href="' + (d.Enlace || '#') + '" class="btn">▶ Abrir en Telegram</a></article>';
+    return '<article class="card"><div class="card-top"><div class="poster">' + imgHtml + '</div><div class="info"><div class="badges"><span class="b-cat">' + (d.Categoría || "") + '</span>' + (d._esNuevo ? '<span class="b-new">🆕 NOVEDAD</span>' : '') + '<span class="b-fol">📁 ' + (d.Carpeta || "") + '</span><button type="button" class="fav-btn' + (esFav ? ' is-fav' : '') + '" data-idx="' + index + '">' + (esFav ? '⭐ Siguiendo' : '☆ Seguir') + '</button></div><div class="title">' + (d.Título || "") + '</div>' + (gen ? '<div class="genre">' + gen + '</div>' : '') + (dir ? '<div class="credits"><b>Dirección:</b> ' + dir + '</div>' : '') + (d.Sinopsis ? '<div class="sinopsis-label">Vista general</div><p class="sinopsis">' + d.Sinopsis + '</p>' : '') + '</div></div>' + pintarCast(d) + '<a href="' + (d.Enlace || '#') + '" class="btn">▶ Abrir en Telegram</a></article>';
   }).join("");
   grid.querySelectorAll(".fav-btn").forEach(function(btn) {
     btn.onclick = function() {
@@ -223,6 +229,16 @@ document.querySelectorAll(".tab").forEach(function(b) {
   b.onclick = function() { document.querySelector(".tab.active").classList.remove("active"); b.classList.add("active"); catActual = b.dataset.cat; aplicarFiltros(); };
 });
 search.oninput = aplicarFiltros; folder.onchange = aplicarFiltros; genre.onchange = aplicarFiltros;
+document.getElementById("rndBtn").onclick = function() {
+  if (!filtrados.length) return;
+  const elegido = filtrados[Math.floor(Math.random() * filtrados.length)];
+  stats.textContent = "🎲 Sugerencia al azar (pulsa de nuevo para otra o cambia de pestaña/filtro para volver):";
+  const copia = filtrados;
+  filtrados = [elegido];
+  limite = 1;
+  pintar();
+  filtrados = copia;
+};
 moreBtn.onclick = function() { limite += 60; pintar(); };
 </script>
 <script data-goatcounter="https://catalogojose.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
